@@ -2,12 +2,14 @@ import cv2
 import RPi.GPIO as gp
 import copy
 import time
+from picamera import PiCamera
+from picamera.array import PiRGBArray
 
 
 def change_cam(setting):
 
     for pin in setting.keys():
-        gp.setup(pin, setting[pin])
+        gp.output(pin, setting[pin])
 
     return
 
@@ -37,7 +39,12 @@ class StereoPair(object):
         for num in devices.keys():
             self._setting[num] = copy.deepcopy(devices[num])
             # self.capture = cv2.VideoCapture(0)
-            self.capture = capture
+        
+        self.capture = capture
+        self.capture.resolution = (640, 480)
+        # self.capture.framerate = 90
+        
+        self.raw = None
 
     def __enter__(self):
         return self
@@ -51,10 +58,13 @@ class StereoPair(object):
         """Get current frames from cameras."""
         frames = []
         for c in [0, 1]:
-            time.sleep(0.1)
+            # time.sleep(0.01)
             change_cam(self._setting[c])
-            frames.append(self.capture.read()[1])
-            time.sleep(0.1)
+            # frames.append(self.capture.read()[1])
+            with PiRGBArray(self.capture) as raw:
+                self.capture.capture(raw, 'bgr')
+                frames.append(raw.array)
+            # time.sleep(0.01)
         return frames
 
     def show_frames(self, wait=0):
@@ -71,7 +81,7 @@ class StereoPair(object):
         """Show video from cameras."""
         while True:
             self.show_frames(1)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == 27:
                 break
             
             
@@ -82,17 +92,16 @@ if __name__ == '__main__':
     gp.setup(7, gp.OUT)
     gp.setup(11, gp.OUT)
     gp.setup(12, gp.OUT)
-    
-    gp.setup(12, True)
 
-    setting = {0: {7: False, 11: False}, 1: {7: True, 11: False}}
+    setting = {0: {7: False, 11: False, 12: True}, 1: {7: False, 11: True, 12: False}}
     change_cam(setting[0])
-    cap = cv2.VideoCapture(0)
-    if cap.isOpened():
-        sp = StereoPair(setting, cap)
+    # cap = cv2.VideoCapture(0)
+    #if cap.isOpened():
+    with PiCamera() as camera:
+        sp = StereoPair(setting, camera)
         
         sp.show_videos()
-    cv2.destroyAllWindows()
+        cv2.destroyAllWindows()
     """
     sp = StereoPair(setting)
     

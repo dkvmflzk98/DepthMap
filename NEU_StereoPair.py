@@ -1,12 +1,13 @@
 import cv2
 import RPi.GPIO as gp
 import copy
+import time
 
 
 def change_cam(setting):
 
-    for num, val in setting:
-        gp.setup(num, val)
+    for pin in setting.keys():
+        gp.setup(pin, setting[pin])
 
     return
 
@@ -26,7 +27,7 @@ class StereoPair(object):
     windows = ["{} camera".format(side) for side in ("Left", "Right")]
     _setting = {}
 
-    def __init__(self, devices):
+    def __init__(self, devices, capture):
         """
         Initialize cameras.
 
@@ -35,7 +36,8 @@ class StereoPair(object):
 
         for num in devices.keys():
             self._setting[num] = copy.deepcopy(devices[num])
-            self.capture = cv2.VideoCapture(0)
+            # self.capture = cv2.VideoCapture(0)
+            self.capture = capture
 
     def __enter__(self):
         return self
@@ -49,8 +51,10 @@ class StereoPair(object):
         """Get current frames from cameras."""
         frames = []
         for c in [0, 1]:
+            time.sleep(0.1)
             change_cam(self._setting[c])
             frames.append(self.capture.read()[1])
+            time.sleep(0.1)
         return frames
 
     def show_frames(self, wait=0):
@@ -69,3 +73,31 @@ class StereoPair(object):
             self.show_frames(1)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+            
+            
+if __name__ == '__main__':
+    gp.setwarnings(False)
+    gp.setmode(gp.BOARD)
+
+    gp.setup(7, gp.OUT)
+    gp.setup(11, gp.OUT)
+    gp.setup(12, gp.OUT)
+    
+    gp.setup(12, True)
+
+    setting = {0: {7: False, 11: False}, 1: {7: True, 11: False}}
+    change_cam(setting[0])
+    cap = cv2.VideoCapture(0)
+    if cap.isOpened():
+        sp = StereoPair(setting, cap)
+        
+        sp.show_videos()
+    cv2.destroyAllWindows()
+    """
+    sp = StereoPair(setting)
+    
+    sp.show_videos()
+    sp.__exit__()
+    """
+    
+    

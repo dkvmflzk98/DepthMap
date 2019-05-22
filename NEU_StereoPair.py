@@ -84,6 +84,12 @@ class StereoPair(object):
             if cv2.waitKey(1) & 0xFF == 27:
                 break
             
+    def save_frame(self):
+        time.sleep(3)
+        frames = self.get_frames()
+        cv2.imwrite('./left.jpg', frames[0])
+        cv2.imwrite('./right.jpg', frames[1])
+            
             
 if __name__ == '__main__':
     gp.setwarnings(False)
@@ -100,8 +106,9 @@ if __name__ == '__main__':
     with PiCamera() as camera:
         sp = StereoPair(setting, camera)
         
-        sp.show_videos()
-        cv2.destroyAllWindows()
+        sp.save_frame()
+        # sp.show_videos()
+        # cv2.destroyAllWindows()
     """
     sp = StereoPair(setting)
     
